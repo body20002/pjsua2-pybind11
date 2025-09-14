@@ -9,6 +9,8 @@
  *
  */
 
+#include <pjmedia/format.h>
+#include <pjsua2/media.hpp>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
@@ -507,6 +509,8 @@ PYBIND11_MODULE(pjsua2, m) {
 
     py::class_<pj::MediaFormatAudio>(m, "MediaFormatAudio")
         .def(py::init())
+        .def_readwrite("id", &pj::MediaFormatAudio::id)
+        .def_readwrite("type", &pj::MediaFormatAudio::type)
         .def_readwrite("clockRate", &pj::MediaFormatAudio::clockRate)
         .def_readwrite("channelCount", &pj::MediaFormatAudio::channelCount)
         .def_readwrite("frameTimeUsec", &pj::MediaFormatAudio::frameTimeUsec)
@@ -648,6 +652,18 @@ PYBIND11_MODULE(pjsua2, m) {
 
     py::class_<pj::AudioMedia, pj::Media>(m, "AudioMedia")
         .def(py::init())
+        // .def(
+        //     "registerMediaPort2",
+        //     [](pj::AudioMedia& self, const std::string& name,
+        //        pj::MediaFormatAudio& fmt) {
+        //         self.registerMediaPort2(name, fmt);
+        //     },
+        //     py::arg("name"), py::arg("fmt")
+        // )
+        // .def(
+        //     "unregisterMediaPort",
+        //     [](pj::AudioMedia& self) { self.unregisterMediaPort(); }
+        // )
         .def_property_readonly("portInfo", &pj::AudioMedia::getPortInfo)
         .def_property_readonly("portId", &pj::AudioMedia::getPortId)
         .def_static(
@@ -670,6 +686,44 @@ PYBIND11_MODULE(pjsua2, m) {
         );
 
     py::bind_vector<std::vector<pj::AudioMedia>>(m, "AudioMediaVector2");
+
+    py::class_<pj::AudioMediaPlayer, pj::AudioMedia>(m, "AudioMediaPlayer")
+        .def(py::init<>())
+        .def(
+            "createPlayer",
+            [](pj::AudioMediaPlayer& self, const std::string& path,
+               unsigned options) { self.createPlayer(path, options); },
+            py::arg("path"), py::arg("options") = 0
+        );
+
+    py::class_<pj::AudioMediaPort, pj::AudioMedia>(m, "AudioMediaPort")
+        .def(py::init<>())
+        .def(
+            "createPort",
+            [](pj::AudioMediaPort& self, const std::string& name,
+               pj::MediaFormatAudio& fmt) { self.createPort(name, fmt); },
+            py::arg("name"), py::arg("fmt")
+        )
+
+        .def(
+            "onFrameReceived", &pj::AudioMediaPort::onFrameReceived,
+            py::arg("frame")
+        )
+        .def(
+            "onFrameRequested", &pj::AudioMediaPort::onFrameRequested,
+            py::arg("frame")
+        );
+
+    py::class_<pj::MediaFrame>(m, "MediaFrame")
+        .def(py::init())
+        .def_readonly("buf", &pj::MediaFrame::buf)
+        .def_readonly("size", &pj::MediaFrame::size);
+
+    py::enum_<pjmedia_format_id>(m, "FormatID")
+        .value("FORMAT_L16", pjmedia_format_id::PJMEDIA_FORMAT_L16)
+        .value("FORMAT_PCM", pjmedia_format_id::PJMEDIA_FORMAT_PCM)
+        /// TODO: more ...
+        ;
 
     py::class_<pj::StreamInfo>(m, "StreamInfo")
         .def(py::init())
